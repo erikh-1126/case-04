@@ -9,6 +9,8 @@ class SurveySubmission(BaseModel):
     consent: bool = Field(..., description="Must be true to accept")
     rating: int = Field(..., ge=1, le=5)
     comments: Optional[str] = Field(None, max_length=1000)
+    user_agent: Optional[str] = None
+    submission_id: Optional[str] = None
   
 
     @validator("comments")
@@ -21,7 +23,15 @@ class SurveySubmission(BaseModel):
             raise ValueError("consent must be true")
         return v
         
-#Good example of inheritance
-class StoredSurveyRecord(SurveySubmission):
+class StoredSurveyRecord(BaseModel):
+    # Stored version — inherits fields but ensures PII is hashed before saving
+    name: str
+    email: str   # hashed
+    age: str     # hashed
+    consent: bool
+    rating: int
+    comments: Optional[str]
+    user_agent: Optional[str]
+    submission_id: str
     received_at: datetime
     ip: str

@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -8,6 +9,14 @@ from storage import append_json_line
 app = Flask(__name__)
 # Allow cross-origin requests so the static HTML can POST from localhost or file://
 CORS(app, resources={r"/v1/*": {"origins": "*"}})
+
+def sha256_hex(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def generate_submission_id(email: str) -> str:
+    now = datetime.utcnow().strftime("%Y%m%d%H")  # UTC date-hour
+    return sha256_hex(f"{email}{now}")
 
 @app.route("/ping", methods=["GET"])
 def ping():
@@ -28,6 +37,16 @@ def submit_survey():
         submission = SurveySubmission(**payload)
     except ValidationError as ve:
         return jsonify({"error": "validation_error", "detail": ve.errors()}), 422
+
+    email_raw = submission.email
+    age_raw = str(submission.age)
+
+    hashed_email = sha256_hex(email_raw)
+    hashed_age = sha256_hex(age_raw)
+
+    submission_id = submission.submission_id or generate_submission_id(email_raw)
+
+
 
     record = StoredSurveyRecord(
         **submission.dict(),
